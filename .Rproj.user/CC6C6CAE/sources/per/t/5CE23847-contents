@@ -1,0 +1,73 @@
+library(MASS)
+library(gam)
+
+# Q1
+XY.df <- read.csv("XY.csv")
+plot(y~x,col="lightgrey", data=XY.df)
+
+mod1=glm(y~x,family=poisson,data=XY.df)
+summary(mod1)
+plot(predict(mod1),residuals(mod1,type="deviance"),col="lightgrey")
+
+mod2=glm(y~x, family=quasipoisson, data=XY.df)
+summary(mod1)
+plot(predict(mod2),residuals(mod2,type="deviance"),col="lightgrey")
+
+summary(mod1)$coef
+summary(mod2)$coef
+summary(mod2)$coef[,2]/summary(mod1)$coef[,2]
+
+(summary(mod2)$coef[,2]/summary(mod1)$coef[,2])[2]^2
+
+mod3=glm.nb(y~x,data=XY.df)
+summary(mod3)
+plot(predict(mod3), residuals(mod3, type="deviance"), col="lightgrey")
+
+# cutting data into 20 bins
+fs=cut(XY.df$x,20)
+mny=tapply(XY.df$y, fs, mean)
+vary=tapply(XY.df$y, fs, var)
+plot(mny, vary)
+lines(mny, mny, lty=2, col="red")
+lines(mny, mny*summary(mod2)$disp, lty=2, col="green")
+lines(mny, mny*(1+mny/mod3$theta), lty=2, col="blue")
+legend("topleft", legend=c("Poisson", "quasi-Poisson",
+                           "Negative Binomial"),lty=rep(2,3), col=c("red", "green", "blue"))
+
+# Q2
+MK.df=read.csv("masskill.csv")
+MK.gam=gam(masskill
+           ~s(I(year-1982))+offset(log(popn/100)),
+           subset=(year<=2019),
+           family="poisson",data=MK.df)
+# fitmodels
+MK.null=glm(masskill
+            ~1,
+            subset=(year<=2019),
+            family="poisson",
+            offset=log(popn/100),data=MK.df)
+MK.lin=glm(masskill
+           ~I(year-1982),
+           subset=(year<=2019),
+           family="poisson",
+           offset=log(popn/100),data=MK.df)
+MK.quad=glm(masskill
+            ~I(year-1982)+I((year-1982)^2),
+            subset=(year<=2019),
+            family="poisson",
+            offset=log(popn/100),data=MK.df)
+#plotfittedvalues
+plot(masskill~year,data=MK.df[MK.df$year<=2019,])
+yrs=MK.df$year[MK.df$year<=2019]
+lines(yrs,exp(predict(MK.gam)),col="black")
+lines(yrs,exp(predict(MK.null)),col="red",lty=2)
+lines(yrs,exp(predict(MK.lin)),col="blue",lty=3)
+lines(yrs,exp(predict(MK.quad)),col="green",lty=4)
+#legend
+legend("topleft",legend=c("GAM","null","linear","quadratic"),
+       lty=c(1,2,3,4),
+       col=c("black","red","blue","green"))
+
+anova(MK.null,MK.lin,MK.quad,test="Chisq")
+
+

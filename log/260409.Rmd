@@ -1,0 +1,204 @@
+---
+title: "Testing extreme cases for the derivative simulation"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r}
+invisible(lapply(dir("R", full.names = TRUE), source)) # Load functions
+```
+
+Some extreme cases for the first derivative in simulation:
+
+```{r}
+excases <- function(no) {
+  switch(no,
+         dirmix(c(1.2, 7, 4)),
+         dirmix(c(1.7, 7, 4)),
+         dirmix(c(2, 7, 4)), # mode = c(0.1, 0.6, 0.3); h = 0.1
+         dirmix(c(3, 7, 4)),
+         dirmix(c(3, 13, 7)), # mode = c(0.1, 0.6, 0.3); h = 0.05
+         dirmix(c(6, 31, 16)) # mode = c(0.1, 0.6, 0.3); h = 0.01
+         )
+}
+```
+
+Simulation function:
+
+```{r}
+exsimu <- function(mix, seed, n = 500, rep = 5) {
+  samp <- DIE_samp(mix, 1e4) # Generate monte Carlo samples
+  iae <- ise <- NULL
+  for (i in 1:rep) {
+    cat(i, " ")
+    set.seed(seed[i])
+    x <- rdirmix(n, mix)
+    fm <- optfm(x)
+    fmb <- optfm(x, bound = 1.51)
+    
+    # ==== Bandwidth from derivative ====
+    # Alpha of finite mixture must > 1.5 to ensure L2 integrability of KDE in first derivative
+    # c = 1.5
+    c <- 1.5
+    pih <- optMISEh(fmb$mix, n, 1)
+    knpi <- dirkn(x, pih$h, c)
+    cvh <- optLSCVh(x, 1)
+    kncv <- dirkn(x, cvh$h, c) 
+    # c can not be 1.5 in KDE if x contains 0, since alpha = x/h + c should > 1.5
+    c <- 1.75
+    cvh1 <- optLSCVh(x, 1, c = c)
+    kncv1 <- dirkn(x, cvh1$h, c) 
+    c <- 2
+    cvh2 <- optLSCVh(x, 1, c = c)
+    kncv2 <- dirkn(x, cvh2$h, c) 
+    
+    # ==== Bandwidth from density ====
+    pih_den <- optMISEh(fmb$mix, n)
+    knpi_den <- dirkn(x, pih_den$h)
+    cvh_den <- optLSCVh(x)
+    kncv_den <- dirkn(x, cvh_den$h)
+    lkh_den  <- optLCVh(x)
+    knlk_den <- dirkn(x, lkh_den$h)
+    
+    IEfm <- DIE(samp, fm$mix)
+    IEfmb <- DIE(samp, fmb$mix)
+    IEpi <- DIE(samp, knpi)
+    IEcv <- DIE(samp, kncv)
+    IEcv1 <- DIE(samp, kncv1)
+    IEcv2 <- DIE(samp, kncv2)
+    IEpi_den <- DIE(samp, knpi_den)
+    IEcv_den <- DIE(samp, kncv_den)
+    IElk_den <- DIE(samp, knlk_den)
+    h <- c(pih$h, cvh$h, cvh1$h, cvh2$h, pih_den$h, cvh_den$h, lkh_den$h)
+    viae <- c(seed[i], IEfm$iae, IEfmb$iae, IEpi$iae, IEcv$iae, IEcv1$iae, IEcv2$iae, 
+              IEpi_den$iae, IEcv_den$iae, IElk_den$iae)
+    vise <- c(seed[i], IEfm$ise, IEfmb$ise, IEpi$ise, IEcv$ise, IEcv1$ise, IEcv2$ise, 
+              IEpi_den$ise, IEcv_den$ise, IElk_den$ise)
+    iae <- rbind(iae, c(viae, h))
+    ise <- rbind(ise, c(vise, h))
+  }
+  colnames(iae) <- colnames(ise) <- c("seed", "fm", "fm1.5", "PI", "CV", "CV1.75", "CV2", "PI_den", "CV_den", "LK_den",
+                                      "PIh", "CVh", "CV1.75h", "CV2h", "PIh_den", "CVh_den", "LKh_den")
+  list(iae = iae, ise = ise)
+}
+```
+
+
+Some basic setting for simulation:
+
+```{r}
+n <- 500
+rep <- 5
+seed <- ceiling(runif(rep, 1, 1e5))
+```
+
+## Model 1: 
+
+Alpha <= 1.5 of the test Dirichlet distribution.
+
+```{r}
+mix <- excases(1)
+plotdg(mix)
+re1 <- exsimu(mix, seed, n, rep)
+```
+
+Simulation results:
+
+```{r}
+re1
+```
+
+When density close to the boundary. It means that our finite mixture's alpha < 1.5.
+
+If we force the finite mixture's alpha > 1.5, the estimation of the finite mixture will be bad. (fm1.5 >> fm)
+
+Since Plug-in method highly depends on fm1.5, its results also bad, and its bandwidth close to 1 (why?).
+
+CV method is not rely on finite mixture. It is better than PI, but compared with other results, CV is still bad. And as c increases, the results getting worse. 
+
+Density based PI and CV selectors are even better than derivative-based ones.
+
+
+## Model 3:
+
+Alpha = 1.7 of the test Dirichlet distribution.
+
+```{r}
+mix <- excases(2)
+plotdg(mix)
+re2 <- exsimu(mix, seed, n, rep)
+```
+
+Simulation results:
+
+```{r}
+lapply(re2, function(i) i[, !colnames(i) %in% c("CV1.75", "CV2", "CV1.75h", "CV2h")])
+```
+
+Since alpha > 1.5 for the test model, the alpha of finite mixture estimation will not outside the boundary, thus the results of fm and fm1.5 is the same.
+
+Density based PI and CV selectors still better than derivative-based ones, but the differences get narrowed.
+
+## Model 3:
+
+Alpha = 2 of the test Dirichlet distribution.
+
+```{r}
+mix <- excases(3)
+plotdg(mix)
+re3 <- exsimu(mix, seed, n, rep)
+```
+
+```{r}
+lapply(re3, function(i) i[, !colnames(i) %in% c("fm1.5", "CV1.75", "CV2", "CV1.75h", "CV2h")])
+```
+
+Density based PI and CV selectors perform similar to derivative-based ones now.
+
+## Model 4:
+
+Alpha = 3 of the test Dirichlet distribution.
+
+```{r}
+mix <- excases(4)
+plotdg(mix)
+re4 <- exsimu(mix, seed, n, rep)
+```
+
+```{r}
+lapply(re4, function(i) i[, !colnames(i) %in% c("fm1.5", "CV1.75", "CV2", "CV1.75h", "CV2h")])
+```
+
+In this case, derivative-based PI and CV selectors are better, just worse than fm.
+
+## Model 5:
+
+Mode is the same as model 3, but alpha_0 is larger.
+
+```{r}
+mix <- excases(5)
+plotdg(mix)
+re5 <- exsimu(mix, seed, n, rep)
+```
+
+```{r}
+lapply(re5, function(i) i[, !colnames(i) %in% c("fm1.5", "CV1.75", "CV2", "CV1.75h", "CV2h")])
+```
+
+## Model 6:
+
+Mode is the same as model 3, but alpha_0 is larger.
+
+```{r}
+mix <- excases(6)
+plotdg(mix)
+re6 <- exsimu(mix, seed, n, rep)
+```
+
+```{r}
+lapply(re6, function(i) i[, !colnames(i) %in% c("fm1.5", "CV1.75", "CV2", "CV1.75h", "CV2h")])
+```
+
+

@@ -1,0 +1,4 @@
+This compares the optimal bandwidth and corresponding MISE in three ways:
+1. Theory from optimize function
+2. Theory from grid search
+3. MC from grid search
