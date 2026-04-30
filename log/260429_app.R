@@ -18,7 +18,8 @@ emp <- WDI(indicator = emp_ind, start = 2023, end = 2023, extra = TRUE) %>%
   mutate(total = agriculture + industry + services,
          agriculture = agriculture / total,
          industry = industry / total,
-         services = services / total) %>% select(-total)
+         services = services / total) %>%
+  select(-total)
 
 empmtx <- emp %>% select(agriculture, industry, services) %>% as.matrix()
 points_simplex(empmtx)
@@ -27,10 +28,10 @@ plot(fm$mix)
 pih <- optMISEh(fm$mix, nrow(empmtx), r = 1, interval = c(0.008, 0.004), tol = 1e-4, verbose = TRUE)
 knpi <- dirkn(empmtx, pih$h, c = 1.5)
 plot(knpi)
-ed <- findmode(empmtx, knpi, step_init = 1e-3, plot = 2, add = T)
+ed <- findmode(empmtx, knpi, step_init = 1e-3, plot = 2, add = TRUE)
 clu <- getcluster(ed)
 cols <- c("#E15759", "#F28E2B", "grey90",  "#8CD17D", "#A0CBE8")
-plot.meanshift(clu, empmtx, pth = F, obj = knpi, steplen = 1e-3, col = cols)
+plot.meanshift(clu, empmtx, pth = FALSE, obj = knpi, steplen = 1e-3, col = cols)
 table(clu$cluster)
 
 # Mapping color by employment
@@ -52,8 +53,3 @@ ggplot(plot_inc) +
   geom_sf(aes(fill = income), color = "grey70", linewidth = 0.15) +
   scale_fill_manual(values = cols[c(3, 1, 2, 4, 5)], na.value = "grey90") +
   theme_void() + labs(fill = "Income group") + theme(legend.position = "none")
-
-
-
-
-
