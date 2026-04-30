@@ -37,9 +37,9 @@ ilrts <- function(x) {
 # Extract x by index
 select_ilrx <- function(x, idx) {
   if (!inherits(x, "ilrx")) stop("The class of x should be ilrx")
-  x$sx = x$sx[idx, , drop = FALSE]
-  x$rx = x$rx[idx, , drop = FALSE]
-  x$jacb = x$jacb[idx]
+  x$sx <- x$sx[idx, , drop = FALSE]
+  x$rx <- x$rx[idx, , drop = FALSE]
+  x$jacb <- x$jacb[idx]
   x
 }
 

@@ -27,7 +27,7 @@ reden <- function(obj, x1, x2) {
   vx2 <- obj$x[, x2]
   vx3 <- 1 - vx1 - vx2
   x <- cbind(vx1, vx2, vx3)
-  obj <- dirkn(x, h = obj$h, c = obj$c)
+  obj <- dirkn(x, h = obj$h, c = obj$c) # nolint
   plot(obj)
 }
 

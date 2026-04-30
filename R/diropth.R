@@ -1,6 +1,6 @@
 # Find the optimal h by grid search to minimize the MISE or DMISE(r=1)
 MISEfh <- function(vh, mix, n, r = 0, c = NULL,
-                  exhaustive = FALSE, verbose = FALSE) {
+                   exhaustive = FALSE, verbose = FALSE) {
   if (r > 1) stop("Only density and its first derivative are being considered.")
   if (r == 1 && is.null(c)) c <- 1.5
   if (is.null(attr(mix, "samp"))) mix <- gene_compsamp(mix)
@@ -30,7 +30,7 @@ MISEfh <- function(vh, mix, n, r = 0, c = NULL,
 
 # Find the optimal h by grid search to minimize LSCV or DLSCV(r=1)
 LSCVfh <- function(vh, x, r = 0, c = NULL,
-                  exhaustive = FALSE, verbose = FALSE) {
+                   exhaustive = FALSE, verbose = FALSE) {
   if (r > 1) stop("Only density and its first derivative are being considered.")
   if (r == 1 && is.null(c)) c <- 1.5
   info <- rep(NA, length(vh))

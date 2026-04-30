@@ -138,4 +138,3 @@ msfst <- function(type = c("dirichlet", "normal"), no, D = 3, n = 100, c = NULL,
   mise <- cbind(no, mise)
   list(miae = miae, mise = mise)
 }
-

@@ -22,7 +22,6 @@ Cdir <- function(a, log = FALSE) {
 dirmix <- function(a = rep(2, 3), pr = 1, sort = TRUE) {
   if (is.vector(a)) a <- t(a)
   m <- nrow(a)
-  D <- ncol(a)
 
   pr <- rep(pr, len = m)
   pr <- pr / sum(pr)
@@ -49,7 +48,7 @@ dirkn <- function(x, h, c = NULL) {
   if (is.null(c)) c <- 1
   o <- order(x[, 1])
   x <- x[o, , drop = FALSE]
-  kn <- list(alpha = x/h + c, x = x, h = h, c = c)
+  kn <- list(alpha = x/h + c, x = x, h = h, c = c) # nolint: infix_spaces_linter.
   class(kn) <- "dirkn"
   kn
 }

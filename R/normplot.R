@@ -63,12 +63,12 @@ plot.normix <- function(mix, euc = FALSE, data = NULL,
                         lv = NULL, plv = seq(0.5, 0.95, len = 4),
                         x1 = NULL, x2 = NULL, axl = 100) {
   if (euc) {
-    if (is.null(x1)) x1 = c(-3, 3)
-    if (is.null(x2)) x2 = c(-3, 3)
+    if (is.null(x1)) x1 <- c(-3, 3)
+    if (is.null(x2)) x2 <- c(-3, 3)
     fun <- contour_euc
   } else {
-    if (is.null(x1)) x1 = c(0, 1)
-    if (is.null(x2)) x2 = c(0, 2 / sqrt(3))
+    if (is.null(x1)) x1 <- c(0, 1)
+    if (is.null(x2)) x2 <- c(0, 2 / sqrt(3))
     fun <- contour_spx
   }
   fun(mix, data, col, add, prop, lv, plv, x1, x2, axl)

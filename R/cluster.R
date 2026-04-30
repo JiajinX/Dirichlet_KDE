@@ -1,11 +1,11 @@
 # Function from x to the modes of mixture
-findmode <- function(st, obj, step_init = NULL, maxit = 1e3, maxrd = 4,
+findmode <- function(st, obj, step_init = NULL, maxit = 1e3, maxrd = 4, # nolint: cyclocomp_linter, line_length_linter.
                      tol = 1e-13, plot = 0, add = FALSE, col = "grey30") {
   if (is.vector(st)) st <- matrix(st, nrow = 1)
   if (is.data.frame(st)) st <- as.matrix(st)
   if (is.null(step_init)) stop("No initial step size provided.")
-  if (!add && plot != 0) simplexpanel()
-  if (plot > 1) points_simplex(st, add = TRUE, col = col, pch = 20)
+  if (!add && plot != 0) simplexpanel() # nolint: object_usage_linter.
+  if (plot > 1) points_simplex(st, add = TRUE, col = col, pch = 20) # nolint
   ed <- st   # Current locations
   # Rows that still need updating in the next round
   pending <- rep(TRUE, nrow(ed))
@@ -17,20 +17,20 @@ findmode <- function(st, obj, step_init = NULL, maxit = 1e3, maxrd = 4,
     for (i in seq_len(maxit)) {
       if (length(active) == 0) break
       sti <- ed[active, , drop = FALSE]
-      nDf <- pddir(sti, obj) / ddirpred(sti, obj)
-      edi <- stepup(sti, step_len * nDf)
+      nDf <- pddir(sti, obj) / ddirpred(sti, obj) # nolint: object_usage_linter, object_name_linter, line_length_linter.
+      edi <- stepup(sti, step_len * nDf) # nolint: object_usage_linter.
       # Rows whose updated point contains 0
       hit0 <- rowSums(edi == 0) > 0
       # rows hitting 0 leave the current round,
       # but continue in the next round with half step size
       if (any(hit0)) next_pending[active[hit0]] <- TRUE
       keep <- !hit0 # Rows that do not hit 0 can be updated
-      if (any(keep)) {
+      if (any(keep)) { # nolint: brace_linter.
         old_keep <- sti[keep, , drop = FALSE]
         new_keep <- edi[keep, , drop = FALSE]
         ed[active[keep], ] <- new_keep # Accept update
         if (plot == 3) {
-          arrows_simplex(old_keep, new_keep,
+          arrows_simplex(old_keep, new_keep, # nolint
                          col = col, add = TRUE, length = 0, tol = 0)
         }
         # Check whether still moving
@@ -44,7 +44,7 @@ findmode <- function(st, obj, step_init = NULL, maxit = 1e3, maxrd = 4,
     step_len <- step_len / 2
   }
   if (plot > 0) {
-    points_simplex(ed, add = TRUE,
+    points_simplex(ed, add = TRUE, # nolint: object_usage_linter.
                    pch = 8, cex = 1.2, lwd = 2, col = 2)
   }
   ed
@@ -63,14 +63,14 @@ plot.meanshift <- function(clu, st, col = NULL,
                            pth = FALSE, obj = NULL, steplen = NULL) {
   m <- max(clu$cluster)
   if (is.null(col)) col <- paletteer::paletteer_d("ggthemes::gdoc", m)
-  simplexpanel()
+  simplexpanel() # nolint: object_usage_linter.
   for (i in seq_len(m)) {
     if (pth) {
       findmode(st[clu$cluster == i, ], obj, steplen,
                plot = 3, add = TRUE, col = col[i])
     } else {
-      points_simplex(st[clu$cluster == i, ], col = col[i], add = TRUE)
-      points_simplex(clu$centers, add = TRUE,
+      points_simplex(st[clu$cluster == i, ], col = col[i], add = TRUE) # nolint: object_usage_linter, line_length_linter.
+      points_simplex(clu$centers, add = TRUE, # nolint: object_usage_linter.
                      pch = 8, cex = 1.2, lwd = 2, col = "grey30")
     }
   }

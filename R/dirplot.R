@@ -206,7 +206,7 @@ simplexpanel3D <- function(view = NULL, zoom = 1, axes = TRUE, alpha = 0.2) {
     view <- rbind(c(0.013, -0.702, 0.712, 0),
                   c(0.926, -0.260, -0.274, 0),
                   c(0.377, 0.663, 0.647, 0),
-                  c(0, 0, 0 , 1))
+                  c(0, 0, 0, 1))
   V <- diag(3)
   rgl::open3d()
   rgl::triangles3d(V, alpha = alpha)

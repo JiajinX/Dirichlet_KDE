@@ -1,11 +1,11 @@
 Cdir_plus <- function(x, y, log = FALSE) {
-    nx <- nrow(x)
-    ny <- nrow(y)
-    xpy <- x[rep(seq_len(nx), ny), , drop = FALSE] +
-      y[rep(seq_len(ny), each = nx), , drop = FALSE]
-    Cxpy <- Cdir(xpy - 1, log = log)
-    dim(Cxpy) <- c(nx, ny)
-    Cxpy
+  nx <- nrow(x)
+  ny <- nrow(y)
+  xpy <- x[rep(seq_len(nx), ny), , drop = FALSE] +
+    y[rep(seq_len(ny), each = nx), , drop = FALSE]
+  Cxpy <- Cdir(xpy - 1, log = log)
+  dim(Cxpy) <- c(nx, ny)
+  Cxpy
 }
 
 gene_compsamp <- function(mix, mn = 1e5, seed = NULL) {

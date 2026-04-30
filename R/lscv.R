@@ -2,7 +2,7 @@ LSCVf <- function(h, x, verbose = FALSE) {
   n <- nrow(x)
   Cx <- Cdir(x/h + 1, log = TRUE)
   outCxx <- outer(Cx, Cx, "+")
-  Cxx <- Cdir_plus(x / h + 1, x / h + 1, log = TRUE)
+  Cxx <- Cdir_plus(x/h + 1, x/h + 1, log = TRUE)
   term1 <- sum(exp(outCxx - Cxx)) / n^2
   douter <- ddir(x, x/h + 1, outer = TRUE)
   diag(douter) <- 0
@@ -18,7 +18,7 @@ LSCVcf <- function(h, x, mix, verbose = FALSE) {
   ya <- x/h + 1
   Cx <- Cdir(ya, log = TRUE)
   outCxx <- outer(Cx, Cx, "+")
-  Cxx <- Cdir_plus(x / h + 1, x / h + 1, log = TRUE)
+  Cxx <- Cdir_plus(x/h + 1, x/h + 1, log = TRUE)
   # First term
   term1 <- sum(exp(outCxx - Cxx)) / n^2
   # Second term
