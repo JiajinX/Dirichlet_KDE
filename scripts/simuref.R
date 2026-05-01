@@ -82,19 +82,19 @@ opt <- list(h = opth, mise = optmise)
 
 # =============================================================================
 
-no <- 6
+no <- 1
 D <- 3
-mix0 <- Norm_mix(no, D - 1)
-# mix0 <- Dir_mix(no, D)
-rep <- 10
+# mix0 <- Norm_mix(no, D - 1)
+class(mix0) <- "normix"
+rep <- 5
 opt <- matrix(nrow = rep, ncol = 2)
 colnames(opt) <- c("h", "MISE")
 r <- 1
 nsamp <- 1e3
 mix0 <- gene_eval(mix0, r, nsamp)
 lh <- 20
-vh <- seq(0.009, 0.003, len = lh)
-n <- 500
+vh <- seq(0.028, 0.022, len = lh)
+n <- 100
 B <- 100
 for (i in seq_len(rep)) {
   cat(i, "\n")
@@ -105,7 +105,4 @@ for (i in seq_len(rep)) {
 }
 (re <- cbind(no, opt))
 beepr::beep(3)
-colMeans(re, na.rm = T)
-
-
-
+colMeans(re, na.rm = TRUE)
