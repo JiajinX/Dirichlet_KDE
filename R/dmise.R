@@ -29,7 +29,7 @@ D1S <- function(x, y) {
   s1 <- rowSums(exp(up - down1))
   s2 <- rowSums(exp(up - down2))
   scut <- D1Scut(log_rx, log_ry, log_rxy)
-  r <- (1 - 1/D) * s1 + s2/D - scut # nolint: infix_spaces_linter. # nolint: infix_spaces_linter.
+  r <- (1 - 1/D) * s1 + s2/D - scut
   dim(r) <- c(nx, ny)
   r
 }

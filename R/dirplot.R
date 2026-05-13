@@ -48,7 +48,7 @@ arrows_simplex <- function(x, y, add = FALSE, tol = 1e-6,
   idx <- rowSums((y - x)^2) > tol
   arrows(x[idx, 1], x[idx, 2], y[idx, 1], y[idx, 2],
          col = col[idx], length = length, angle = angle, ...)
-  points(x[!idx, ], col = col[idx], pch = 20, cex = 0.01)
+  points(x[!idx, , drop = FALSE], col = col[idx], pch = 20, cex = 0.01)
 }
 
 simplex_grid <- function(x1 = c(0, 1), x2 = c(0, 2 / sqrt(3)), axl = 100,
