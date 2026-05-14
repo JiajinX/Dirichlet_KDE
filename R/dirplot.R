@@ -1,7 +1,8 @@
 # Create a simplex panel
-simplexpanel <- function(lab = list(expression(x[1]),
-                                    expression(x[2]),
-                                    expression(x[3]))) {
+simplexpanel <- function(lab = NULL, labcex = 1) {
+  if (is.null(lab)) lab <- list(expression(x[1]),
+                                expression(x[2]),
+                                expression(x[3]))
   par(mar = rep(1, 4))
   liml <- 0.1
   labl <- 0.06
@@ -17,9 +18,9 @@ simplexpanel <- function(lab = list(expression(x[1]),
                 sidel / 2, 1, sidel, 0), nrow = 4)
   gap <- c(10, 25, 50, 75, 90) / 100
   temp <- gap / sqrt(3)
-  text(sidel / 2, 1 + labl, lab[[1]])
-  text(-labl / sidel, -labl / 2, lab[[2]], adj = 1)
-  text(sidel + labl / sidel, -labl / 2, lab[[3]], adj = 0)
+  text(sidel / 2, 1 + labl, lab[[1]], cex = labcex)
+  text(-labl / sidel, -labl / 2, lab[[2]], adj = 1, cex = labcex)
+  text(sidel + labl / sidel, -labl / 2, lab[[3]], adj = 0, cex = labcex)
   segments(temp, gap, sidel - temp, gap, lty = 3, col = "grey")
   segments(temp, gap, 2 * temp, 0, lty = 3, col = "grey")
   segments(sidel - temp, gap, sidel - 2 * temp, 0, lty = 3, col = "grey")

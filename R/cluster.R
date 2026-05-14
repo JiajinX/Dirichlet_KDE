@@ -180,10 +180,10 @@ mgcluster <- function(clu, map) {
   cluster
 }
 
-plot.meanshift <- function(clu, st, pth = FALSE, obj = NULL, col = NULL) {
+plot.meanshift <- function(clu, st, pth = FALSE, obj = NULL, col = NULL, lab = NULL) {
   m <- max(clu$cluster)
   if (is.null(col)) col <- paletteer::paletteer_d("ggthemes::gdoc", m)
-  simplexpanel()
+  simplexpanel(lab, labcex = 1.2)
   for (i in seq_len(m)) {
     sti <- st[clu$cluster == i, ]
     if (pth) {
@@ -192,6 +192,6 @@ plot.meanshift <- function(clu, st, pth = FALSE, obj = NULL, col = NULL) {
       points_simplex(sti, col = col[i], add = TRUE)
     }
     points_simplex(clu$centers, add = TRUE,
-                   pch = 8, cex = 1.2, lwd = 2, col = 1)
+                   pch = 8, cex = 1.2, col = 1)
   }
 }
