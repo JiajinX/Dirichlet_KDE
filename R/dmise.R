@@ -43,12 +43,12 @@ DCdh <- function(h, mix, c) {
   ya2 <- 2 * y$a
   C2y <- Cdir(ya2 - 1, log = TRUE)
   Cd <- exp(2 * y$Ca - C2y)
-  Cs <- (1 - 1/D) * # nolint: infix_spaces_linter. # nolint: infix_spaces_linter.
-    rowSums(exp(log(y$a - 1) - log(2) - log(ya2 - 3))) + (1 - D)/4 # nolint: infix_spaces_linter.
+  Cs <- (1 - 1/D) *
+    rowSums(exp(log(y$a - 1) - log(2) - log(ya2 - 3))) + (1 - D)/4
   r <- Cd * Cs
   dim(r) <- rev(size)
 
-  logc <- prefactor(1/h + c * D, 1/h + c * D, D) # nolint: infix_spaces_linter.
+  logc <- prefactor(1/h + c * D, 1/h + c * D, D)
   sum(colMeans(r) * mix$pr) * exp(c(logc))
 }
 
@@ -78,7 +78,7 @@ DPsi1 <- function(h, mix, c) {
   Cs <- D1S(y$a, mix$alpha)
   group <- rep(seq_len(size[1]), each = size[2])
   r <- rowsum(Cd * Cs, group) / size[2]
-  logC <- prefactor(1/h + c * D, a0, D) # nolint: infix_spaces_linter.
+  logC <- prefactor(1/h + c * D, a0, D)
   r * exp(logC[rep(1, size[1]), ])
 }
 
@@ -109,13 +109,13 @@ DPsi2 <- function(h, mix, c) {
   Cs1 <- rowSums(exp(Csup - Csdown1))
   Cs2 <- rowSums(exp(Csup - Csdown2))
   Cscut <- D1Scut(log_rya1_1, log_rya2_1, log_sumya_2)
-  Cs <- (1 - 1/D) * Cs1 + Cs2/D - Cscut # nolint: infix_spaces_linter. # nolint: infix_spaces_linter.
+  Cs <- (1 - 1/D) * Cs1 + Cs2/D - Cscut
 
   dim(Cd) <- dim(Cs) <- c(prod(size), size[1])
   group <- rep(seq_len(size[1]), each = size[2])
   r <- rowsum(Cd * Cs, group) / size[2]
 
-  logC <- prefactor(1/h + c * D, 1/h + c * D, D) # nolint: infix_spaces_linter. # nolint: infix_spaces_linter.
+  logC <- prefactor(1/h + c * D, 1/h + c * D, D)
   r * exp(c(logC))
 }
 
@@ -133,7 +133,7 @@ DMISEf <- function(h, mix, n, c = 1.5, verbose = FALSE) {
   psi1 <- DPsi1(h, mix, c)
   psi2 <- DPsi2(h, mix, c)
 
-  re <- c(cdh / n + t(mix$pr) %*% ((1 - 1/n) * psi2 - 2 * psi1 + psi0) %*% mix$pr) # nolint: infix_spaces_linter.
+  re <- c(cdh / n + t(mix$pr) %*% ((1 - 1/n) * psi2 - 2 * psi1 + psi0) %*% mix$pr)
   if (verbose) print(paste0(round(h, 4), ": ", round(re, 2)))
   re
 }

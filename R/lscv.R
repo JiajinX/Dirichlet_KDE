@@ -3,10 +3,32 @@ LSCVf <- function(h, x, verbose = FALSE) {
   Cx <- Cdir(x/h + 1, log = TRUE)
   outCxx <- outer(Cx, Cx, "+")
   Cxx <- Cdir_plus(x/h + 1, x/h + 1, log = TRUE)
+  term1 <- exp(log_sum_exp(outCxx - Cxx) - 2 * log(n))
+  douter <- ddir(x, x/h + 1, log = TRUE, outer = TRUE)
+  diag(douter) <- -Inf
+  term2 <- exp(log_sum_exp(douter) - log(n * (n - 1)))
+  re <- term1 - 2 * term2
+  if (verbose) print(paste0(round(h, 4), ": ", round(re, 2)))
+  re
+}
+
+# The second integral can be approximated by K-fold cross validation
+LSCVkf <- function(h, x, folds, verbose = FALSE) {
+  n <- nrow(x)
+  Cx <- Cdir(x/h + 1, log = TRUE)
+  outCxx <- outer(Cx, Cx, "+")
+  Cxx <- Cdir_plus(x/h + 1, x/h + 1, log = TRUE)
   term1 <- sum(exp(outCxx - Cxx)) / n^2
   douter <- ddir(x, x/h + 1, outer = TRUE)
-  diag(douter) <- 0
-  term2 <- sum(douter) / (n * (n - 1))
+
+  nfold <- as.integer(table(folds))
+  total <- rowSums(douter)
+  fold_sum <- t(rowsum(t(douter), group = folds))
+  same_fold_sum <- fold_sum[cbind(seq_len(n), folds)]
+  size <- n - nfold[folds]
+  cval <- (total - same_fold_sum) / size
+
+  term2 <- mean(cval)
   re <- term1 - 2 * term2
   if (verbose) print(paste0(round(h, 4), ": ", round(re, 2)))
   re
@@ -80,7 +102,7 @@ DLSCV_1st <- function(h, x, c = 1.5) {
   Cx <- Cdir(ya, log = TRUE)
   outCxx <- outer(Cx, Cx, "+")
   Cxx <- Cdir_plus(ya, ya, log = TRUE)
-  Cd <- exp(outCxx - Cxx)
+  logCd <- outCxx - Cxx
 
   idx1 <- unlist(lapply(1:n, function(i) i:n))
   idx2 <- rep(1:n, n:1)
@@ -97,13 +119,16 @@ DLSCV_1st <- function(h, x, c = 1.5) {
   ty <- rowSums(exp(log_ya_1[idx2, , drop = FALSE] - log_sumya_2))
   Cscut <- tx * ty / D
   Cs <- (1 - 1/D) * Cs1 + Cs2/D - Cscut
-  r1 <- Cs * Cd[lower.tri(Cd, diag = TRUE)]
-  r1 <- 2 * sum(r1[!diag]) + sum(r1[diag])
+  log_r1 <- log(abs(Cs)) + logCd[lower.tri(logCd, diag = TRUE)] +
+    log(ifelse(diag, 1, 2))
+  r1 <- signed_log_sum_exp(log_r1, sign(Cs))
   logC <- prefactor(1/h + c * D, 1/h + c * D, D)
-  r1 * exp(logC) / n^2
+  unname(r1["sign"] * exp(r1["logabs"] + logC - 2 * log(n)))
 }
 
 DLSCVf <- function(h, x, c = 1.5, verbose = FALSE) {
+  if (any(!is.finite(x))) stop("x must be finite.")
+  if (any(x <= 0)) stop("x must be strictly positive.")
   n <- nrow(x)
   D <- ncol(x)
   ya <- x/h + c
@@ -111,28 +136,43 @@ DLSCVf <- function(h, x, c = 1.5, verbose = FALSE) {
   # First term
   term1 <- DLSCV_1st(h, x, c)
   # Second term
-  douter <- ddir(x, ya, outer = TRUE)
-  diag(douter) <- 0
+  log_douter <- ddir(x, ya, log = TRUE, outer = TRUE)
   diag2 <- seq(1, n * n, by = n + 1)
-  # Delete rows of diagonal index, because diag(douter) = 0
+  # Delete rows of diagonal index.
   rx <- x[rep(1:n, each = n - 1), , drop = FALSE]
   rya <- ya[rep(1:n, n)[-diag2], , drop = FALSE]
   log_rya_1 <- log(rya - 1)
   log_rx <- log(rx)
-  gm <- exp(log_rya_1 - log_rx)
+  log_gm <- log_rya_1 - log_rx # log(g)
+
   idx3 <- unlist(lapply(1:D, function(i) i:D))
   idx4 <- rep(1:D, D:1)
-  diag3 <- idx3 == idx4
-  D2 <- t(apply(gm, 1, function(g) g[idx3] * g[idx4]))
-  Dg <- exp(log_rya_1 - 2 * log_rx)
-  D2[, diag3] <- D2[, diag3] - Dg
-  r2 <- c(t(douter))[-diag2] * D2
-  r2 <- colSums(r2) / (n * (n - 1))
+  diag3 <- idx3 == idx4 # diag3: diagonal columns == TRUE
+  # g^{\otimes 2} = gg^{\top}: D × D matrix
+  # Upper triangle element of log_D2 = log(gg^{\top})
+  # Each column is log(g_i * g_j)
+  log_D2 <- matrix(NA, nrow = nrow(log_gm), ncol = length(idx3))
+  log_D2[, !diag3] <- log_gm[, idx3[!diag3], drop = FALSE] +
+    log_gm[, idx4[!diag3], drop = FALSE] # Off-diagonal columns
+  log_D2[, diag3] <- log_rya_1 + log(abs(rya - 2)) - 2 * log_rx
+  # Diagonal columns: log((a_k - 1)(a_k - 2)/x_k^2)
+  sign_D2 <- matrix(1, nrow = nrow(log_D2), ncol = ncol(log_D2))
+  sign_D2[, diag3] <- sign(rya - 2) # Records possible negative signs on diagonal terms
+
+  log_terms <- log_D2 + c(t(log_douter))[-diag2] # -diag2 for leave one out
+  # log(D^{\otimes 2} f_h(x_i; x_j/h + c)): n(n-1) × D(D+1)/2 [upper triangle elements]
   P <- diag3 - 1/D
-  Pr2 <- -P * r2
-  term2 <- 2 * sum(Pr2[!diag3]) + sum(Pr2[diag3])
+  coef <- ifelse(diag3, 1, 2) * -P
+  # Since only the elements of the upper triangle are recorded,
+  # off-diagonal elements * 2.
+  log_terms <- t(t(log_terms) + log(abs(coef)))
+  sign_terms <- t(t(sign_D2) * sign(coef))
+  term2 <- signed_log_sum_exp(c(log_terms), c(sign_terms))
+  term2 <- unname(term2["sign"] * exp(term2["logabs"] - log(n * (n - 1))))
+
   re <- c(term1 - 2 * term2)
   if (verbose) print(paste0(round(h, 4), ": ", round(re, 2)))
+  attr(re, "term") <- c(term1, term2)
   re
 }
 

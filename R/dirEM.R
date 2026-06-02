@@ -1,11 +1,11 @@
 # Log-likelihood of Dirichlet mixture
 logLik.dirmix <- function(mix, x) {
-  sum(ddirmix(x, mix, log = TRUE)) # nolint: object_usage_linter.
+  sum(ddirmix(x, mix, log = TRUE))
 }
 
 # Fit one Dirichlet distribution for the data
 # Modify from compositions::fitDirichlet with restrict of alpha >= 1
-fitDir <- function(x, bound = 1, tol = 1e-4, maxit = 50) { # nolint: object_name_linter, line_length_linter.
+fitDir <- function(x, bound = 1, tol = 1e-4, maxit = 50) {
   if (is.vector(x)) x <- t(x)
   n <- nrow(x)
   D <- ncol(x)
@@ -20,12 +20,12 @@ fitDir <- function(x, bound = 1, tol = 1e-4, maxit = 50) { # nolint: object_name
     V <- diag(trigamma(alpha)) - trigamma(sum(alpha))
     update <- solve(V, (elog - E))
     update[update < 0 & alpha == bound] <- 0
-    alpha <- stepup(alpha, update, bound = bound)[1, ] # bound = 1.5???? # nolint: object_usage_linter.
+    alpha <- stepup(alpha, update, bound = bound)[1, ] # bound = 1.5????
     ll <-
       -n * (sum(lgamma(alpha)) - lgamma(sum(alpha)) - sum(elog * (alpha - 1)))
     if (ll <= ll.old + tol) break
   }
-  list(mix = dirmix(alpha), ll = ll) # nolint: object_usage_linter.
+  list(mix = dirmix(alpha), ll = ll)
 }
 
 initEMDir <- function(data, m, bound = 1, minsize = 2, try = 50) {
@@ -41,7 +41,7 @@ initEMDir <- function(data, m, bound = 1, minsize = 2, try = 50) {
     fitDir(data[km$cluster == i, ,  drop = FALSE], bound = bound)$mix$alpha
   }))
   pr <- tabulate(km$cluster) / length(km$cluster)
-  dirmix(a = ia, pr = pr) # What if a cluster has one point? # nolint: object_usage_linter.
+  dirmix(a = ia, pr = pr) # What if a cluster has one point?
 }
 
 # Delete support points with pr close to 0
@@ -151,7 +151,7 @@ EMDir <- function(data, m, bound = 1, maxit = 100, tol = 1e-4) {
   mix <- initEMDir(data, m, bound) # Initial part
   ll <- logLik(mix, data)
   for (i in seq_len(maxit)) {
-    logd <- ddir(data, mix$alpha, log = TRUE, outer = TRUE) + # nolint: object_usage_linter.
+    logd <- ddir(data, mix$alpha, log = TRUE, outer = TRUE) +
       rep(log(mix$pr), rep(n, length(mix$pr)))
     # log f(x_i;α_j) + log π_j = log [π_j * f(x_i;α_j)]
     ma <- lsei::matMaxs(logd)
@@ -182,7 +182,7 @@ unique.dirmix <- function(mix, prec = 0) {
   j <- mix$pr <= prec[2]
   a <- mix$alpha[!j, , drop = FALSE]
   pr <- mix$pr[!j] # Drop components with small pr
-  if (prec[1] == 0) return(dirmix(a, pr)) # nolint: object_usage_linter.
+  if (prec[1] == 0) return(dirmix(a, pr))
   repeat {
     if (nrow(a) == 1) break
     d <- abs(a[-1, , drop = FALSE] - a[-nrow(a), , drop = FALSE])
@@ -202,7 +202,7 @@ unique.dirmix <- function(mix, prec = 0) {
     a <- a[-(ind + 1), , drop = FALSE]
     pr <- pr[-(ind + 1)] # Remove the second of a pair
   }
-  dirmix(a, pr) # nolint: object_usage_linter.
+  dirmix(a, pr)
 }
 
 collapse_points <- function(mix, data, tol = 1e-3) {

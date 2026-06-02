@@ -1,4 +1,4 @@
-Dir_mix <- function(no, D = 3, c = 1) { # nolint
+Dir_mix <- function(no, D = 3, c = 1) {
   if (D < 3)  stop("Dimension setting error.")
   p <- switch(no,
     # Same bandwidth

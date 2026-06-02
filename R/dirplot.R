@@ -68,7 +68,8 @@ simplex_grid <- function(x1 = c(0, 1), x2 = c(0, 2 / sqrt(3)), axl = 100,
 
 plot.dirkn <- function(kn, data = NULL, col = NULL, add = FALSE,
                        prop = TRUE, lv = NULL, plv = seq(0.5, 0.95, len = 4),
-                       x1 = c(0, 1), x2 = c(0, 2 / sqrt(3)), axl = 100) {
+                       x1 = c(0, 1), x2 = c(0, 2 / sqrt(3)), axl = 100,
+                       scale = 1) {
   if (is.data.frame(data)) data <- as.matrix(data)
   x <- simplex_grid(x1, x2, axl) # Grid for calculating density
   d <- rep(NA, length = axl^2)
@@ -87,7 +88,7 @@ plot.dirkn <- function(kn, data = NULL, col = NULL, add = FALSE,
   lb <- if (prop) paste0(lv * 100, "%") else round(lv, 2) # Labels of levels
   dim(d) <- c(axl, axl)
   if (is.null(col)) col <- paletteer::paletteer_c("viridis::viridis", length(lv))
-  if (prop) col <- rev(col)
+  if (prop) col <- rev(col) else d <- d * scale
   if (!add) simplexpanel()
   contour(x$ax2, x$ax1, d, levels = lv, labels = lb,
           col = col, labcex = 0.8, add = TRUE)
@@ -95,7 +96,8 @@ plot.dirkn <- function(kn, data = NULL, col = NULL, add = FALSE,
 
 plot.dirmix <- function(mix, data = NULL, col = NULL, add = FALSE, prop = TRUE,
                         lv = NULL, plv = seq(0.5, 0.95, len = 4),
-                        x1 = c(0, 1), x2 = c(0, 2 / sqrt(3)), axl = 100) {
+                        x1 = c(0, 1), x2 = c(0, 2 / sqrt(3)), axl = 100,
+                        scale = 1) {
   if (is.data.frame(data)) data <- as.matrix(data)
   x <- simplex_grid(x1, x2, axl) # Grid for calculating density
   d <- rep(NA, length = axl^2)
@@ -113,7 +115,7 @@ plot.dirmix <- function(mix, data = NULL, col = NULL, add = FALSE, prop = TRUE,
   lb <- if (prop) paste0(lv * 100, "%") else round(lv, 2) # Labels of levels
   dim(d) <- c(axl, axl)
   if (is.null(col)) col <- paletteer::paletteer_c("viridis::viridis", length(lv))
-  if (prop) col <- rev(col)
+  if (prop) col <- rev(col) else d <- d * scale
   if (!add) simplexpanel()
   contour(x$ax2, x$ax1, d, levels = lv, labels = lb,
           col = col, labcex = 0.8, add = TRUE)
@@ -202,34 +204,17 @@ dirmode <- function(obj, st = NULL, steplen = 1e-3, tol = 1e-10, maxit = 1e3,
   ed[!duplicated(round(ed, 9)), , drop = FALSE]
 }
 
-simplexpanel3D <- function(view = NULL, zoom = 1, axes = TRUE, alpha = 0.2) {
-  if (is.null(view))
-    view <- rbind(c(0.013, -0.702, 0.712, 0),
-                  c(0.926, -0.260, -0.274, 0),
-                  c(0.377, 0.663, 0.647, 0),
-                  c(0, 0, 0, 1))
-  V <- diag(3)
-  rgl::open3d()
-  rgl::triangles3d(V, alpha = alpha)
-  if (axes) rgl::axes3d()
-  rgl::view3d(userMatrix = view, zoom = zoom)
-}
-
-simplex3D_grid <- function(x = c(0, 1), margin = 1e-3, axl = 100) {
-  ax <- seq(x[1] + margin, x[2] - margin, l = axl)
-  x <- as.matrix(expand.grid(ax, ax))
-  x <- cbind(x, 1 - rowSums(x))
-  x <- x / rowSums(x)
-  i <- rowSums(x >= margin) == 3
-  list(grid = x, valid = i, ax = ax)
-}
-
-vfplot3D <- function(obj, add = FALSE, col = "blue", scale = 1e-3, axl = 30,
-                     view = NULL, zoom = 1, axes = TRUE) {
-  gd <- simplex3D_grid(axl = axl)
-  x <- gd$grid[gd$valid, ]
-  pd <- pddir(x, obj, proj = FALSE)
-  y <- gdvend(x, pd, scale = scale)
-  if (!add) simplexpanel3D(view, zoom, axes)
-  compositions::arrows3D(x, y, col = col, length = 0.1)
+# Draw the Decision boundary of two estimation on simplex
+decbondary <- function(est1, est2, prior, threshold = NULL,
+                       x1 = c(0, 2 / sqrt(3)), x2 = c(0, 1),
+                       axl = 100, level = 0, add = FALSE, ...) {
+  x <- simplex_grid(x1, x2, axl)
+  d <- rep(NA, length = axl^2)
+  d1 <- dspx(x$grid[x$valid, ], est1) # Grid density
+  d2 <- dspx(x$grid[x$valid, ], est2)
+  if (!is.null(threshold)) d1[d1 < threshold] <- 0
+  d[x$valid] <- d1 * prior[1] - d2 * prior[2]
+  dim(d) <- c(axl, axl)
+  if (!add) simplexpanel()
+  contour(x$ax2, x$ax1, d, levels = level, drawlabels = FALSE, add = TRUE, ...)
 }

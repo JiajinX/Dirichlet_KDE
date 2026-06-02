@@ -67,6 +67,7 @@
 #   }
 # }
 
+# Find local maximum by modal EM
 MEM <- function(st, obj, tem = 5e2, tol = 1e-13,
                 pth = FALSE, add = FALSE, col = "grey50") {
   if (is.vector(st)) st <- t(st)
@@ -180,10 +181,13 @@ mgcluster <- function(clu, map) {
   cluster
 }
 
-plot.meanshift <- function(clu, st, pth = FALSE, obj = NULL, col = NULL, lab = NULL) {
+plot.meanshift <- function(clu, st, pth = FALSE, obj = NULL, contour = FALSE,
+                           col = NULL, lab = NULL) {
   m <- max(clu$cluster)
   if (is.null(col)) col <- paletteer::paletteer_d("ggthemes::gdoc", m)
   simplexpanel(lab, labcex = 1.2)
+  if (contour) plot(obj, data = st, add = TRUE, col = "grey60",
+                    lv = seq(30, 90, len = 4) / 100)
   for (i in seq_len(m)) {
     sti <- st[clu$cluster == i, ]
     if (pth) {

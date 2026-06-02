@@ -78,6 +78,7 @@ optMISEh <- function(mix, n, r = 0, c = NULL,
 optLSCVh <- function(x, r = 0, c = NULL,
                      interval = c(1, 1e-3), tol = 1e-3, verbose = FALSE) {
   if (r > 1) stop("Only density and its first derivative are being considered.")
+  if (!is.matrix(x)) x <- as.matrix(x)
   if (r == 0) {
     tp <- "Density"
     opt <- optimize(LSCVf, x = x,

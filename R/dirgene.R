@@ -48,7 +48,7 @@ dirkn <- function(x, h, c = NULL) {
   if (is.null(c)) c <- 1
   o <- order(x[, 1])
   x <- x[o, , drop = FALSE]
-  kn <- list(alpha = x/h + c, x = x, h = h, c = c) # nolint: infix_spaces_linter.
+  kn <- list(alpha = x/h + c, x = x, h = h, c = c)
   class(kn) <- "dirkn"
   kn
 }
@@ -82,7 +82,9 @@ rdircomp <- function(n, mix) {
 ddir <- function(x, a, log = FALSE, outer = FALSE) {
   if (is.vector(x)) x <- t(x)
   if (is.vector(a)) a <- t(a)
-  if (any(is.nan(c(x, a)))) stop("The input has NaN.")
+  if (any(!is.finite(c(x, a)))) stop("The input must be finite.")
+  if (any(x < 0)) stop("x must be non-negative.")
+  if (any(a <= 0)) stop("alpha must be positive.")
   n <- nrow(x)
   m <- nrow(a)
 
@@ -100,7 +102,10 @@ ddir <- function(x, a, log = FALSE, outer = FALSE) {
     logx <- logx[rep(1:n, m), , drop = FALSE]
   }
   xa <- (a - 1) * logx
-  xa[is.na(xa)] <- 0 # When x = 0 and a = 1, x^(a-1) = 1 => (a-1) * logx = 0
+  # When x = 0 and a = 1, x^(a-1) = 1 => (a-1) * logx = 0
+  power0 <- a == 1 & !is.na(logx) & logx == -Inf
+  xa[power0] <- 0
+  if (any(is.na(xa))) stop("Invalid x and alpha values in Dirichlet density.")
   d <- logmbeta + rowSums(xa)
   if (outer) dim(d) <- c(n, m)
   if (!log) d <- exp(d)

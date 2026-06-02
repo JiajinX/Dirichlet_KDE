@@ -40,14 +40,15 @@ table(clu$cluster)
 mgmap <- distmin_map(clu, empmtx)
 clu <- mgcluster(clu, mgmap)
 table(clu$cluster)
-# pdf("Employment.pdf"), width = 6, height = 5)
+# pdf("Employment.pdf", width = 7, height = 6)
 cols <- c("#F28E2B", "#8CD17D", "#A0CBE8", "#E15759")
-plot.meanshift(clu, empmtx, pth = TRUE, obj = knpi, col = cols, lab = c("Ag", "Se", "In"))
+plot.meanshift(clu, empmtx, pth = TRUE, obj = knpi, contour = TRUE,
+               col = cols, lab = c("Ag", "Se", "In"))
 
 # Mapping color by employment
 clumap <- data.frame(iso3c = emp$iso3c, clust = as.factor(clu$cluster))
 world <- ne_countries(scale = "medium", type = "map_units", returnclass = "sf")
-plot_clu <- world %>% left_join(clumap, by = c("iso_a3" = "iso3c"))
+plot_clu <- world %>% left_join(clumap, by = c("iso_a3_eh" = "iso3c"))
 ggplot(plot_clu) +
   geom_sf(aes(fill = clust), color = "grey70", linewidth = 0.15) +
   scale_fill_manual(values = cols, na.value = "grey90") + # paletteer_d("ggthemes::Tableau_20")
