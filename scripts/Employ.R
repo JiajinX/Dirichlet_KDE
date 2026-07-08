@@ -42,7 +42,7 @@ clu <- mgcluster(clu, mgmap)
 table(clu$cluster)
 # pdf("Employment.pdf", width = 7, height = 6)
 cols <- c("#F28E2B", "#8CD17D", "#A0CBE8", "#E15759")
-plot.meanshift(clu, empmtx, pth = TRUE, obj = knpi, contour = TRUE,
+plot.meanshift(clu, empmtx, pth = TRUE, obj = knpi, contour = FALSE,
                col = cols, lab = c("Ag", "Se", "In"))
 
 # Mapping color by employment

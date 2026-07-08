@@ -206,7 +206,7 @@ dirmode <- function(obj, st = NULL, steplen = 1e-3, tol = 1e-10, maxit = 1e3,
 
 # Draw the Decision boundary of two estimation on simplex
 decbondary <- function(est1, est2, prior, threshold = NULL,
-                       x1 = c(0, 2 / sqrt(3)), x2 = c(0, 1),
+                       x1 = c(0, 1), x2 = c(0, 2 / sqrt(3)),
                        axl = 100, level = 0, add = FALSE, ...) {
   x <- simplex_grid(x1, x2, axl)
   d <- rep(NA, length = axl^2)
@@ -217,4 +217,20 @@ decbondary <- function(est1, est2, prior, threshold = NULL,
   dim(d) <- c(axl, axl)
   if (!add) simplexpanel()
   contour(x$ax2, x$ax1, d, levels = level, drawlabels = FALSE, add = TRUE, ...)
+}
+
+betaplot <- function(obj, data = NULL,
+                     ymax = NULL, axl = 100, add = FALSE, ...) {
+  x <- seq(0, 1, length = 100)
+  d <- dspx(cbind(x, 1 - x), obj)
+  if (is.null(ymax)) ymax <- max(d)
+  if (!add) {
+    plot.new()
+    plot.window(xlim = c(0,1), ylim = c(0, ymax))
+    box()
+    axis(1)
+    axis(2)
+  }
+  lines(x, d, ...)
+  rug(data, ...)
 }

@@ -70,12 +70,12 @@ calfun_alpha <- function(x, a, p, deriv = 0) {
   if (deriv != 0) dim(p) <- NULL
   xp <-
     switch(deriv + 1,
-      rowSums((tcrossprod(a, logx) - rowSums(lgamma(a))) * t(p)),
-      # Original objective function
-      (logx[rep(1:n, m), ] - digamma(a)[rep(1:m, each = n), ]) * p,
-      # p_ij * [log(x_ik) - ψ(α_jk)] - first derivative
-      -trigamma(a)[rep(1:m, each = n), ] * p
-      # -p_ij * ψ'(α_jk) - second derivative
+           rowSums((tcrossprod(a, logx) - rowSums(lgamma(a))) * t(p)),
+           # Original objective function
+           (logx[rep(1:n, m), ] - digamma(a)[rep(1:m, each = n), ]) * p,
+           # p_ij * [log(x_ik) - ψ(α_jk)] - first derivative
+           -trigamma(a)[rep(1:m, each = n), ] * p
+           # -p_ij * ψ'(α_jk) - second derivative
     )
   if (deriv != 0) {
     dim(xp) <- c(n, m * D)
@@ -96,22 +96,40 @@ calfun_alpha <- function(x, a, p, deriv = 0) {
 
 # Updating alpha by using Newton-Raphson method (EM)
 # x: data; a: alpha; p: value get from EM
-iter_alpha <- function(x, a, p, bound = 1,
+iter_alpha <- function(x, a, p, bound = 1, a0 = 80,
                        maxit = 100, maxbt = 50, tol = 1e-4) {
+
   m <- nrow(a)
+  D <- ncol(a)
+  Dbound <- D * bound
+  if (a0 < Dbound) stop("Infeasible constraints: need a0 >= D × bound.")
+
+  initout <- which(rowSums(a) > a0) # Make sure initial a is feasible
+  if (length(initout) > 0) {
+    a[initout, ] <- t(sapply(initout, function(comp) {
+      bound + (a0 - Dbound) / (sum(a[comp, ]) - Dbound) * (a[comp, ] - bound)}))
+  }
   obj.old <- obj <- calfun_alpha(x, a, p)
   fa.old <- fa <- sum(obj)
+
   # cat("\nalpha-function:"); print(fa, digits = 16)
   for (i in seq_len(maxit)) {
     g <- calfun_alpha(x, a, p, deriv = 1)
     H <- calfun_alpha(x, a, p, deriv = 2)
-
     a.old <- a
     a <- t(sapply(1:m, function(comp) {
-      P <- H[[comp]] %*% (a[comp, ] - bound) - g[comp, ]
+      P <- H[[comp]] %*% (a.old[comp, ] - bound) - g[comp, ]
       Q <- -H[[comp]]
       lsei::pnnqp(Q, P)$x + bound # 1 -> bound (set by user)
     }))
+    isouta0 <- which(rowSums(a) > a0)
+    if (length(isouta0) > 0) {
+      a[isouta0, ] <- t(sapply(isouta0, function(comp) {
+        P <- H[[comp]] %*% (a.old[comp, ] - bound) - g[comp, ]
+        Q <- -H[[comp]]
+        lsei::pnnqp(Q, P, sum = a0 - Dbound)$x + bound
+      }))
+    }
     obj <- calfun_alpha(x, a, p)
 
     # Back Tracking part for heterogeneous finite mixture
@@ -135,6 +153,7 @@ iter_alpha <- function(x, a, p, bound = 1,
           alpha * a.up[ibt, , drop = FALSE]
       }
     }
+    obj <- calfun_alpha(x, a, p)
     fa <- sum(obj)
     # cat("\nalpha-function:"); print(fa, digits = 16)
     if (fa <= fa.old + tol) break
@@ -146,7 +165,7 @@ iter_alpha <- function(x, a, p, bound = 1,
 }
 
 # EM of heterogeneous Dirichlet mixture
-EMDir <- function(data, m, bound = 1, maxit = 100, tol = 1e-4) {
+EMDir <- function(data, m, bound = 1, a0 = 80, maxit = 100, tol = 1e-4) {
   n <- nrow(data)
   mix <- initEMDir(data, m, bound) # Initial part
   ll <- logLik(mix, data)
@@ -161,7 +180,7 @@ EMDir <- function(data, m, bound = 1, maxit = 100, tol = 1e-4) {
     # -ma or not will not change p, which is the same as
     mix$pr <- colMeans(p) # π_j'
     mix <- dropsp(mix)
-    mix$alpha <- iter_alpha(data, mix$alpha, p, bound) # Update alpha
+    mix$alpha <- iter_alpha(data, mix$alpha, p, bound, a0) # Update alpha
 
     ll.old <- ll
     ll <- logLik(mix, data)
@@ -240,7 +259,8 @@ collapse_points <- function(mix, data, tol = 1e-3) {
   list(mix = mix, ll = ll)
 }
 
-optfm <- function(data, bound = 1, criterion = c("BIC", "AIC", "AICc"), mtol = 3,
+optfm <- function(data, bound = 1, a0 = 80,
+                  criterion = c("BIC", "AIC", "AICc"), mtol = 3,
                   maxrd = 10, verbose = FALSE) {
   if (is.data.frame(data)) data <- as.matrix(data)
   criterion <- match.arg(criterion)
@@ -254,7 +274,7 @@ optfm <- function(data, bound = 1, criterion = c("BIC", "AIC", "AICc"), mtol = 3
   for (i in seq_len(maxit)) {
     validmix <- FALSE
     for (j in seq_len(maxrd)) {
-      r <- EMDir(data, i, bound)
+      r <- EMDir(data, i, bound, a0)
       if (all(r$mix$alpha < 1e4) && is.finite(r$ll)) {
         validmix <- TRUE
         break

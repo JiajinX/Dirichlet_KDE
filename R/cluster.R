@@ -187,7 +187,7 @@ plot.meanshift <- function(clu, st, pth = FALSE, obj = NULL, contour = FALSE,
   if (is.null(col)) col <- paletteer::paletteer_d("ggthemes::gdoc", m)
   simplexpanel(lab, labcex = 1.2)
   if (contour) plot(obj, data = st, add = TRUE, col = "grey60",
-                    lv = seq(30, 90, len = 4) / 100)
+                    lv = seq(30, 90, len = 4) / 100, axl = 200)
   for (i in seq_len(m)) {
     sti <- st[clu$cluster == i, ]
     if (pth) {
@@ -196,6 +196,6 @@ plot.meanshift <- function(clu, st, pth = FALSE, obj = NULL, contour = FALSE,
       points_simplex(sti, col = col[i], add = TRUE)
     }
     points_simplex(clu$centers, add = TRUE,
-                   pch = 8, cex = 1.2, col = 1)
+                   pch = 3, cex = 1.2, col = 1)
   }
 }

@@ -73,7 +73,7 @@ rmix <- function(n, mix, seed = NULL) {
 
 # Density on the simplex for Dirichlet/Normal mixture/kernel
 dspx <- function(x, obj, log = FALSE) {
-  if (!is.matrix(x)) x <- as.matrix(x)
+  if (is.data.frame(x)) x <- as.matrix(x)
   fun <- if (inherits(obj, "normix")) dSnormix else ddirpred
   fun(x, obj, log)
 }
@@ -100,11 +100,15 @@ closure <- function(x) {
   x / rowSums(x)
 }
 
-aggregation <- function(x, comb) {
-  x <- closure(x)
+co_aggregate <- function(x, comb, closure = TRUE) {
+  if (closure) x <- closure(x)
   cols <- sort(unique(do.call(c, comb)))
   if (any(seq_len(ncol(x)) != cols)) stop("Problem with the comb settings.")
-  sapply(comb, function(cols) {
-    rowSums(x[, cols, drop = FALSE])
-  })
+  sapply(comb, function(cols) rowSums(x[, cols, drop = FALSE]))
+}
+
+dir_aggregate <- function(obj, comb) {
+  if (class(obj) == "dirmix") {
+    dirmix(co_aggregate(obj$alpha, comb, FALSE), obj$pr)
+  } else dirkn(co_aggregate(obj$x, comb), obj$h, obj$c)
 }
