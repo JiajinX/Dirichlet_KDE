@@ -2,7 +2,7 @@
 
 # Generate data to do kernel estimation
 gene_data <- function(n, mix, B, seed = NULL) {
-  set.seed(seed)
+  if (!is.null(seed)) set.seed(seed)
   x <- replicate(B, rmix(n, mix), simplify = FALSE)
   if (inherits(mix, "normix")) x <- lapply(x, function(rx) ilrts(rx)$sx)
   attr(mix, "data") <- x
@@ -11,7 +11,7 @@ gene_data <- function(n, mix, B, seed = NULL) {
 
 # Generate evaluate points for Monte Carlo method
 gene_eval <- function(mix, r = 0, neva = 1e3, seed = NULL) {
-  set.seed(seed)
+  if (!is.null(seed)) set.seed(seed)
   D <- ifelse(inherits(mix, "dirmix"), ncol(mix$alpha), ncol(mix$mu) + 1)
   eva <- gtools::rdirichlet(neva, rep(1, D))
   deva <- if (r == 0) dspx(eva, mix) else pdspx(eva, mix)

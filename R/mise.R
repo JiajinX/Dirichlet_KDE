@@ -9,7 +9,7 @@ Cdir_plus <- function(x, y, log = FALSE) {
 }
 
 gene_compsamp <- function(mix, mn = 1e5, seed = NULL) {
-  set.seed(seed)
+  if (!is.null(seed)) set.seed(seed)
   m <- length(mix$pr)
   samp <- replicate(2, do.call(rbind, rdircomp(mn, mix)), simplify = FALSE)
   attr(samp, "size") <- c(m, mn)

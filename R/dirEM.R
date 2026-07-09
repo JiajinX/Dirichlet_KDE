@@ -12,18 +12,25 @@ fitDir <- function(x, bound = 1, tol = 1e-4, maxit = 50) {
   ultx <- compositions::ult(x)
   if (is.null(dim(ultx))) ultx <- t(ultx)
   elog <- colMeans(ultx)
-  alpha <- rep(2, D)
-  ll <- ll.old <-
-    -n * (sum(lgamma(alpha)) - lgamma(sum(alpha)) - sum(elog * (alpha - 1)))
-  for (i in 1:maxit) {
+  alpha <- rep(max(2, bound), D)
+  ll <- -n * (sum(lgamma(alpha)) - lgamma(sum(alpha)) - sum(elog * (alpha - 1)))
+  for (i in seq_len(maxit)) {
+    alpha.old <- alpha
+    ll.old <- ll
     E <- digamma(alpha) - digamma(sum(alpha))
     V <- diag(trigamma(alpha)) - trigamma(sum(alpha))
     update <- solve(V, (elog - E))
-    update[update < 0 & alpha == bound] <- 0
-    alpha <- stepup(alpha, update, bound = bound)[1, ] # bound = 1.5????
+    isbound <- alpha <= bound + sqrt(.Machine$double.eps)
+    update[update < 0 & isbound] <- 0
+    alpha <- stepup(alpha, update, bound = bound)[1, ]
     ll <-
       -n * (sum(lgamma(alpha)) - lgamma(sum(alpha)) - sum(elog * (alpha - 1)))
-    if (ll <= ll.old + tol) break
+    if (ll < ll.old) {
+      alpha <- alpha.old
+      ll <- ll.old
+      break
+    }
+    if (ll - ll.old <= tol) break
   }
   list(mix = dirmix(alpha), ll = ll)
 }
@@ -42,20 +49,6 @@ initEMDir <- function(data, m, bound = 1, minsize = 2, try = 50) {
   }))
   pr <- tabulate(km$cluster) / length(km$cluster)
   dirmix(a = ia, pr = pr) # What if a cluster has one point?
-}
-
-# Delete support points with pr close to 0
-dropsp <- function(mix) {
-  j <- mix$pr < 1e-10
-  if (any(j)) { # Delete support points with pr close to 0
-    mix$pr <- mix$pr[!j]
-    mix$pr <- mix$pr / sum(mix$pr)
-    logmbeta <- attr(mix$alpha, "logmbeta")[!j]
-    mix$alpha <- mix$alpha[!j, ]
-    attr(mix$alpha, "logmbeta") <- logmbeta
-    p <- p[, !j, drop = FALSE]
-  }
-  mix
 }
 
 # Objective function needs to be maximized by iteration alpha (EM -> iter_alpha)
@@ -98,17 +91,9 @@ calfun_alpha <- function(x, a, p, deriv = 0) {
 # x: data; a: alpha; p: value get from EM
 iter_alpha <- function(x, a, p, bound = 1, a0 = 80,
                        maxit = 100, maxbt = 50, tol = 1e-4) {
-
   m <- nrow(a)
   D <- ncol(a)
   Dbound <- D * bound
-  if (a0 < Dbound) stop("Infeasible constraints: need a0 >= D × bound.")
-
-  initout <- which(rowSums(a) > a0) # Make sure initial a is feasible
-  if (length(initout) > 0) {
-    a[initout, ] <- t(sapply(initout, function(comp) {
-      bound + (a0 - Dbound) / (sum(a[comp, ]) - Dbound) * (a[comp, ] - bound)}))
-  }
   obj.old <- obj <- calfun_alpha(x, a, p)
   fa.old <- fa <- sum(obj)
 
@@ -156,7 +141,13 @@ iter_alpha <- function(x, a, p, bound = 1, a0 = 80,
     obj <- calfun_alpha(x, a, p)
     fa <- sum(obj)
     # cat("\nalpha-function:"); print(fa, digits = 16)
-    if (fa <= fa.old + tol) break
+    if (fa < fa.old) {
+      a <- a.old
+      obj <- obj.old
+      fa <- fa.old
+      break
+    }
+    if (fa - fa.old <= tol) break
     obj.old <- obj
     fa.old <- fa
   } # The alpha-function seems to be monotonically increasing for each iteration
@@ -168,8 +159,20 @@ iter_alpha <- function(x, a, p, bound = 1, a0 = 80,
 EMDir <- function(data, m, bound = 1, a0 = 80, maxit = 100, tol = 1e-4) {
   n <- nrow(data)
   mix <- initEMDir(data, m, bound) # Initial part
+  D <- ncol(mix$alpha)
+  Dbound <- D * bound
+  initout <- which(rowSums(mix$alpha) > a0)
+  if (length(initout) > 0) {
+    a <- mix$alpha
+    a[initout, ] <- t(sapply(initout, function(comp) {
+      bound + (a0 - Dbound) / (sum(a[comp, ]) - Dbound) * (a[comp, ] - bound)}))
+    attr(a, "logmbeta") <- NULL
+    mix <- dirmix(a, mix$pr)
+  }
   ll <- logLik(mix, data)
   for (i in seq_len(maxit)) {
+    mix.old <- mix
+    ll.old <- ll
     logd <- ddir(data, mix$alpha, log = TRUE, outer = TRUE) +
       rep(log(mix$pr), rep(n, length(mix$pr)))
     # log f(x_i;α_j) + log π_j = log [π_j * f(x_i;α_j)]
@@ -179,12 +182,23 @@ EMDir <- function(data, m, bound = 1, a0 = 80, maxit = 100, tol = 1e-4) {
     p <- pi.d / pi.s
     # -ma or not will not change p, which is the same as
     mix$pr <- colMeans(p) # π_j'
-    mix <- dropsp(mix)
-    mix$alpha <- iter_alpha(data, mix$alpha, p, bound, a0) # Update alpha
-
-    ll.old <- ll
+    j <- mix$pr < 1e-10 # Delete support points with pr close to 0
+    if (any(j)) {
+      mix$pr <- mix$pr[!j]
+      mix$pr <- mix$pr / sum(mix$pr)
+      logmbeta <- attr(mix$alpha, "logmbeta")
+      mix$alpha <- mix$alpha[!j, , drop = FALSE]
+      attr(mix$alpha, "logmbeta") <- logmbeta[!j]
+      p <- p[, !j, drop = FALSE]
+    }
+    mix$alpha <- iter_alpha(data, mix$alpha, p, bound, a0, tol = tol) # Update alpha
     ll <- logLik(mix, data)
-    if (ll <= ll.old + tol) break
+    if (ll < ll.old) {
+      mix <- mix.old
+      ll <- ll.old
+      break
+    }
+    if (ll - ll.old <= tol) break
   }
   at <- mix$alpha - 1
   attr(at, "logmbeta") <- NULL
@@ -239,9 +253,11 @@ collapse_points <- function(mix, data, tol = 1e-3) {
   if (m == 1 || tol <= 0) return(list(mix = mix, ll = ll))
   o <- do.call(order, split(mix$alpha, col(mix$alpha))) # Order by each column
   logmbeta <- attr(mix$alpha, "logmbeta")[o]
+  mode <- attr(mix, "mode")
   mix$alpha <- mix$alpha[o, , drop = FALSE]
   mix$pr <- mix$pr[o]
   attr(mix$alpha, "logmbeta") <- logmbeta
+  attr(mix, "mode") <- mode[o, , drop = FALSE]
   prec <- 1e-10 # Initial precision value
   repeat {
     if (nrow(mix$alpha) <= 1) break
@@ -286,7 +302,7 @@ optfm <- function(data, bound = 1, a0 = 80,
     }
     r <- collapse_points(r$mix, data)
     # Merge similar mixture components and delete components with tiny pr
-    p <- D * nrow(r$mix$alpha) - 1
+    p <- (D + 1) * nrow(r$mix$alpha) - 1
     ic[i] <- -2 * r$ll +
       switch(criterion,
              AIC = {2 * p},

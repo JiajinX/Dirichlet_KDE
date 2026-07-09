@@ -66,7 +66,7 @@ optLCVh <- function(x, interval = c(1, 1e-3), tol = 1e-3) {
 
 # Generate data from Dirichlet/Normal mixture
 rmix <- function(n, mix, seed = NULL) {
-  set.seed(seed)
+  if (!is.null(seed)) set.seed(seed)
   fun <- if (inherits(mix, "normix")) rnormix else rdirmix
   fun(n, mix)
 }

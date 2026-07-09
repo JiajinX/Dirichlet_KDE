@@ -120,11 +120,11 @@ dvalley_map <- function(clu, obj, size = NULL, k = 3) {
   dst <- as.matrix(dist(cc))
   r <- seq(0.01, 0.99, len = 99)
   den <- dst
-  den[,] <- NA
+  den[, ] <- NA
   for (i in sci) {
     cnear <- setdiff(order(dst[i, ]), sci)[1:k]
     for (j in cnear) {
-      pth <- outer(1 - r, cc[i,]) + outer(r, cc[j,])
+      pth <- outer(1 - r, cc[i, ]) + outer(r, cc[j, ])
       d <- dspx(pth, obj)
       den[i, j] <- min(d)
     }

@@ -15,7 +15,7 @@ ISErl <- function(obj, test) {
 rlCV <- function(data, k = 10, seed = NULL) {
   if (is.data.frame(data)) data <- as.matrix(data)
   data <- closure(data)
-  set.seed(seed)
+  if (!is.null(seed)) set.seed(seed)
   fid <- sample(rep(seq_len(k), length = nrow(data)))
   mthd <- c("PI", "CV", "LK", "FM")
   ms <- matrix(nrow = k, ncol = length(mthd))

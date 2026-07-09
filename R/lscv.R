@@ -1,22 +1,41 @@
 CV_1st <- function(h, x) {
   n <- nrow(x)
-  ya <- x/h + 1
+  ya <- x / h + 1
   Cx <- Cdir(ya, log = TRUE)
-  outCxx <- outer(Cx, Cx, "+")
-  Cxx <- Cdir_plus(ya, ya, log = TRUE)
-  exp(log_sum_exp(outCxx - Cxx) - 2 * log(n))
+  # Lower-triangular pairs
+  idx1 <- unlist(lapply(seq_len(n), function(i) i:n), use.names = FALSE)
+  idx2 <- rep(seq_len(n), n:1)
+  diag <- idx1 == idx2
+
+  aij <- ya[idx1, , drop = FALSE] + ya[idx2, , drop = FALSE] - 1
+  log_terms <- Cx[idx1] + Cx[idx2] - Cdir(aij, log = TRUE) + ifelse(diag, 0, log(2))
+  exp(log_sum_exp(log_terms) - 2 * log(n))
 }
 
 LSCV_2nd <- function(h, x) {
   n <- nrow(x)
-  ya <- x/h + 1
-  douter <- ddir(x, ya, log = TRUE, outer = TRUE)
-  diag(douter) <- -Inf
-  exp(log_sum_exp(douter) - log(n * (n - 1)))
+  u <- x / h
+  ya <- u + 1
+  logx <- log(x)
+  has_zero <- any(x == 0)
+  if (has_zero) {
+    zero_x <- x == 0
+    logx[zero_x] <- 0 # Temporarily treat 0^0 as one
+  }
+  log_douter <- tcrossprod(logx, u)
+  if (has_zero) {
+    # x[i,k] = 0 and u[j,k] > 0 implies zero density
+    invalid <- tcrossprod(zero_x * 1, (u > 0) * 1) > 0
+    log_douter[invalid] <- -Inf
+  }
+  log_douter <- sweep(log_douter, 2, Cdir(ya, log = TRUE), "+")
+  diag(log_douter) <- -Inf
+  exp(log_sum_exp(log_douter) - log(n * (n - 1)))
 }
 
 LSCVf <- function(h, x, verbose = FALSE) {
-  if (any(!is.finite(x))) stop("x must be finite.")
+  if (h <= 0) stop("h must be positive.")
+  if (any(abs(rowSums(x) - 1) > sqrt(.Machine$double.eps))) stop("x must be on the simplex.")
   if (any(x < 0)) stop("x must be non-negative.")
   term1 <- CV_1st(h, x)
   term2 <- LSCV_2nd(h, x)
@@ -55,60 +74,68 @@ LSCVf <- function(h, x, verbose = FALSE) {
 # }
 
 # Integral of the frist term in DLSCV
-DLSCV_1st <- function(h, x, c = 1.5) {
+# If x = 0, then function requires c > 1.5.
+DCV_1st <- function(h, x, c = 1.5) {
   n <- nrow(x)
   D <- ncol(x)
   ya <- x/h + c
+  u <- ya - 1
   Cx <- Cdir(ya, log = TRUE)
-  outCxx <- outer(Cx, Cx, "+")
-  Cxx <- Cdir_plus(ya, ya, log = TRUE)
-  logCd <- outCxx - Cxx
-  
-  idx1 <- unlist(lapply(1:n, function(i) i:n))
-  idx2 <- rep(1:n, n:1)
+
+  # Only calculate lower-triangular pairs
+  idx1 <- unlist(lapply(seq_len(n), function(i) i:n), use.names = FALSE)
+  idx2 <- rep(seq_len(n), n:1)
   diag <- idx1 == idx2
-  # Indices of lower triangular elements in symmetric matrix
-  log_ya_1 <- log(ya - 1)
-  Csup <- log_ya_1[idx1, , drop = FALSE] + log_ya_1[idx2, , drop = FALSE]
-  sumya <- ya[idx1, , drop = FALSE] + ya[idx2, , drop = FALSE]
-  log_sumya_2 <- log(sumya - 2)
-  log_sumya_3 <- log(sumya - 3)
-  Cs1 <- rowSums(exp(Csup - (log_sumya_2 + log_sumya_3)))
-  Cs2 <- rowSums(exp(Csup - 2 * log_sumya_2))
-  tx <- rowSums(exp(log_ya_1[idx1, , drop = FALSE] - log_sumya_2))
-  ty <- rowSums(exp(log_ya_1[idx2, , drop = FALSE] - log_sumya_2))
-  Cscut <- tx * ty / D
-  Cs <- (1 - 1/D) * Cs1 + Cs2/D - Cscut
-  log_r1 <- log(abs(Cs)) + logCd[lower.tri(logCd, diag = TRUE)] +
-    log(ifelse(diag, 1, 2))
-  r1 <- signed_log_sum_exp(log_r1, sign(Cs))
-  logC <- prefactor(1/h + c * D, 1/h + c * D, D)
-  unname(r1["sign"] * exp(r1["logabs"] + logC - 2 * log(n)))
+  ui <- u[idx1, , drop = FALSE]
+  uj <- u[idx2, , drop = FALSE]
+  usum <- ui + uj
+  ri <- ui / usum
+  rj <- uj / usum
+  Cs1 <- rowSums(ri * uj / (usum - 1))
+  Cs2 <- rowSums(ri * rj)
+  Cs <- (1 - 1 / D) * Cs1 + Cs2 / D - rowSums(ri) * rowSums(rj) / D
+  logCd <- Cx[idx1] + Cx[idx2] - Cdir(usum + 1, log = TRUE)
+  log_terms <- log(abs(Cs)) + logCd + ifelse(diag, 0, log(2))
+  total <- signed_log_sum_exp(log_terms, sign(Cs))
+
+  alpha0 <- 1 / h + c * D
+  pref <- 2 * alpha0 - D - 1
+  log_prefactor <- log(pref) + log(pref - 1)
+
+  unname(total["sign"] * exp(total["logabs"] + log_prefactor - 2 * log(n)))
 }
 
 DLSCV_2nd <- function(h, x, c = 1.5) {
   n <- nrow(x)
   D <- ncol(x)
   ya <- x / h + c
-  
-  log_douter <- ddir(x, ya, log = TRUE, outer = TRUE)
-  diag2 <- seq(1, n * n, by = n + 1)
-  
-  rx <- x[rep(1:n, each = n - 1), , drop = FALSE]
-  rya <- ya[rep(1:n, n)[-diag2], , drop = FALSE]
-  
-  g <- (rya - 1) / rx
-  q <- (rya - 1) / rx^2
-  
-  bracket <- rowSums((g - rowMeans(g))^2) - (1 - 1 / D) * rowSums(q)
-  contrib <- exp(c(t(log_douter))[-diag2]) * bracket
-  mean(contrib)
+  u <- ya - 1
+
+  invx <- 1 / x
+  invx2 <- invx^2
+
+  # log f_Dir(x_i; ya_j)
+  log_douter <- tcrossprod(log(x), u)
+  log_douter <- sweep(log_douter, 2, Cdir(ya, log = TRUE), "+")
+
+  # sum(g), sum(g^2), sum(q) for every (i, j)
+  sum_g <- tcrossprod(invx, u)
+  sum_g2 <- tcrossprod(invx2, u^2)
+  sum_q <- tcrossprod(invx2, u)
+
+  bracket <- sum_g2 - sum_g^2 / D - (1 - 1 / D) * sum_q
+
+  diag(log_douter) <- -Inf
+  diag(bracket) <- 0
+
+  sum(exp(log_douter) * bracket) / (n * (n - 1))
 }
 
 DLSCVf <- function(h, x, c = 1.5, verbose = FALSE) {
-  if (any(!is.finite(x))) stop("x must be finite.")
-  if (any(x <= 0)) stop("x must be strictly positive.")
-  term1 <- DLSCV_1st(h, x, c) # First term
+  if (h <= 0) stop("h must be positive.")
+  if (any(abs(rowSums(x) - 1) > sqrt(.Machine$double.eps))) stop("x must be on the simplex.")
+  if (any(x <= 0)) stop("x must be positive.")
+  term1 <- DCV_1st(h, x, c) # First term
   term2 <- DLSCV_2nd(h, x, c) # Second term
   re <- term1 + 2 * term2
   if (verbose) print(paste0(round(h, 4), ": ", round(re, 2)))
@@ -117,7 +144,7 @@ DLSCVf <- function(h, x, c = 1.5, verbose = FALSE) {
 
 # DLSCVf <- function(h, x, c = 1.5, verbose = FALSE) {
 #   if (any(!is.finite(x))) stop("x must be finite.")
-#   if (any(x <= 0)) stop("x must be strictly positive.")
+#   if (any(x < 0)) stop("x must be non-negative.")
 #   n <- nrow(x)
 #   D <- ncol(x)
 #   ya <- x/h + c
