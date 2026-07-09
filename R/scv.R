@@ -69,3 +69,8 @@ DSCVf <- function(h, x, mix, c = 1.5, verbose = FALSE) {
   if (verbose) print(paste0(round(h, 4), ": ", round(re, 2)))
   re
 }
+
+SCV2 <- function(h, x, mix, r = 0, c = NULL) {
+  if (r == 1 && is.null(c)) c <- 1.5
+  if (r == 0) SCV_2nd(h, x, mix) else DSCV_2nd(h, x, mix, c)
+}

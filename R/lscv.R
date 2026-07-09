@@ -128,7 +128,7 @@ DLSCV_2nd <- function(h, x, c = 1.5) {
   diag(log_douter) <- -Inf
   diag(bracket) <- 0
 
-  sum(exp(log_douter) * bracket) / (n * (n - 1))
+  -sum(exp(log_douter) * bracket) / (n * (n - 1))
 }
 
 DLSCVf <- function(h, x, c = 1.5, verbose = FALSE) {
@@ -137,7 +137,7 @@ DLSCVf <- function(h, x, c = 1.5, verbose = FALSE) {
   if (any(x <= 0)) stop("x must be positive.")
   term1 <- DCV_1st(h, x, c) # First term
   term2 <- DLSCV_2nd(h, x, c) # Second term
-  re <- term1 + 2 * term2
+  re <- term1 - 2 * term2
   if (verbose) print(paste0(round(h, 4), ": ", round(re, 2)))
   re
 }
@@ -191,3 +191,13 @@ DLSCVf <- function(h, x, c = 1.5, verbose = FALSE) {
 #   attr(re, "term") <- c(term1, term2)
 #   re
 # }
+
+CV1 <- function(h, x, r = 0, c = NULL) {
+  if (r == 1 && is.null(c)) c <- 1.5
+  if (r == 0) CV_1st(h, x) else DCV_1st(h, x, c)
+}
+
+LSCV2 <- function(h, x, r = 0, c = NULL) {
+  if (r == 1 && is.null(c)) c <- 1.5
+  if (r == 0) LSCV_2nd(h, x) else DLSCV_2nd(h, x, c)
+}
