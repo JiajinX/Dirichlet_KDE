@@ -17,25 +17,35 @@ rlCV <- function(data, k = 10, seed = NULL) {
   data <- closure(data)
   if (!is.null(seed)) set.seed(seed)
   fid <- sample(rep(seq_len(k), length = nrow(data)))
-  mthd <- c("PI", "CV", "LK", "FM")
-  ms <- matrix(nrow = k, ncol = length(mthd))
-  colnames(ms) <- mthd
+  mthd <- c("PI", "CV", "RS", "LK", "FM")
+  ms <- matrix(nrow = k, ncol = length(mthd), dimnames = list(NULL, mthd))
+  vh <- c(seq(0.06, 0.01, len = 50), seq(0.01, 0.001, len = 30)[-1])
   for (i in seq_len(k)) {
     print(i)
     train <- data[fid != i, ]
     test <- data[fid == i, ]
 
     fm <- optfm(train)
-    pih <- optMISEh(fm$mix, nrow(train))
-    cvh <- optLSCVh(train)
-    lkh <- optLCVh(train)
+    fmix <- fm$mix
+    invalid <- is.null(fm) || any(fmix$alpha < 1)
+    if (invalid) {
+      ms[i, "seed"] <- seed
+      print("Invalid finite mixture.")
+      next
+    }
+    pih <- optMISEh(fmix, nrow(train)) # PI
+    # CV & RS
+    t1 <- sapply(vh, function(h) CV1(h, train))
+    t2_lscv <- sapply(vh, function(h) LSCV2(h, train))
+    t2_scv <- sapply(vh, function(h) SCV2(h, train, fmix))
+    lscvh <- vh[which.min(t1 - 2 * t2_lscv)]
+    scvh <- vh[which.min(t1 - 2 * t2_scv)]
+    lkh <- optLCVh(train) # LK
 
-    knpi <- dirkn(train, pih$h)
-    kncv <- dirkn(train, cvh$h)
-    knlk <- dirkn(train, lkh$h)
-
-    ms[i, ] <- c(ISErl(knpi, test), ISErl(kncv, test),
-                 ISErl(knlk, test), ISErl(fm$mix, test))
+    bw <- c(pih$h, lscvh, scvh, lkh$h)
+    knre <- sapply(bw, function(h) ISErl(dirkn(train, h), test))
+    fmre <- ISErl(fmix, test)
+    ms[i, ] <- c(knre, fmre)
   }
   if (!is.null(seed)) ms <- cbind(seed, ms)
   ms

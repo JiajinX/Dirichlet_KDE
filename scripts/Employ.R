@@ -13,7 +13,8 @@ emp_ind <- c(
   services    = "SL.SRV.EMPL.ZS"
 )
 
-emp <- WDI(indicator = emp_ind, start = 2025, end = 2025, extra = TRUE) %>%
+emp_raw <- WDI(indicator = emp_ind, start = 2025, end = 2025, extra = TRUE)
+emp <- emp_raw %>%
   filter(region != "Aggregates") %>%
   select(country, iso3c, income, agriculture, industry, services) %>%
   filter(if_all(c(agriculture, industry, services), ~ !is.na(.x))) %>%
