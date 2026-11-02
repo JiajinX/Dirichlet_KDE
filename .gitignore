@@ -1,11 +1,4 @@
-.Rproj.user/
+.Rproj.user
 .Rhistory
 .RData
 .Ruserdata
-data/
-figure/
-log/
-meeting/
-Rold/
-Meet_Q.txt
-todo.txt

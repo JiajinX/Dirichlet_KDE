@@ -52,7 +52,7 @@ Dir_mix <- function(no, D = 3, c = 1) {
                    xmu[, 3])
       colnames(xmu) <- colnames(ymu) <- NULL
       list(mu = rbind(xmu, ymu),
-           pr = c(rep(0.45 / l, l), rep(0.55 / l, l)),
+           pr = c(rep(0.45 / 5, 5), rep(0.55 / 5, 5)),
            h = c(sqrt(x1) * 0.09, sqrt(rev(x1)) * 0.1))
     },
   )

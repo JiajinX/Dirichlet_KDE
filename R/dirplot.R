@@ -38,6 +38,13 @@ points_simplex <- function(x, add = FALSE, col = 2, pch = 20, cex = 0.8, ...) {
   points(x, col = col, pch = pch, cex = cex, ...)
 }
 
+text_simplex <- function(x, lab, add = FALSE, col = 2, cex = 0.8, ...) {
+  if (!add) simplexpanel()
+  if (is.vector(x)) x <- t(x)
+  x <- cbind((2 - 2 * x[, 2] - x[, 1]) / sqrt(3), x[, 1])
+  text(x, lab, col = col, cex = cex, ...)
+}
+
 arrows_simplex <- function(x, y, add = FALSE, tol = 1e-6,
                            col = "grey60", length = 0.04, angle = 15, ...) {
   if (!add) simplexpanel()
@@ -69,7 +76,7 @@ simplex_grid <- function(x1 = c(0, 1), x2 = c(0, 2 / sqrt(3)), axl = 100,
 plot.dirkn <- function(kn, data = NULL, col = NULL, add = FALSE,
                        prop = TRUE, lv = NULL, plv = seq(0.5, 0.95, len = 4),
                        x1 = c(0, 1), x2 = c(0, 2 / sqrt(3)), axl = 100,
-                       scale = 1) {
+                       scale = 1, labcex = 0.8) {
   if (is.data.frame(data)) data <- as.matrix(data)
   x <- simplex_grid(x1, x2, axl) # Grid for calculating density
   d <- rep(NA, length = axl^2)
@@ -91,7 +98,7 @@ plot.dirkn <- function(kn, data = NULL, col = NULL, add = FALSE,
   if (prop) col <- rev(col) else d <- d * scale
   if (!add) simplexpanel()
   contour(x$ax2, x$ax1, d, levels = lv, labels = lb,
-          col = col, labcex = 0.8, add = TRUE)
+          col = col, labcex = labcex, add = TRUE)
 }
 
 plot.dirmix <- function(mix, data = NULL, col = NULL, add = FALSE, prop = TRUE,
@@ -118,7 +125,7 @@ plot.dirmix <- function(mix, data = NULL, col = NULL, add = FALSE, prop = TRUE,
   if (prop) col <- rev(col) else d <- d * scale
   if (!add) simplexpanel()
   contour(x$ax2, x$ax1, d, levels = lv, labels = lb,
-          col = col, labcex = 0.8, add = TRUE)
+          col = col, add = TRUE)
   points_simplex(attr(mix, "mode"), add = TRUE)
 }
 
@@ -146,7 +153,8 @@ gdvend <- function(x, pd, scale, unit = FALSE) {
 vfplot <- function(obj, scale = NULL, unit = TRUE, add = FALSE,
                    x1 = c(0, 1), x2 = c(0, 2 / sqrt(3)), axl = 30) {
   if (is.null(scale)) scale <- ifelse(unit, 3e-2, 1e-3)
-  x <- simplex_grid(x1, x2, axl) # Grid for calculating density
+  bound <- inherits(obj, "dirmix")
+  x <- simplex_grid(x1, x2, axl, bound) # Grid for calculating density
   xval <- x$grid[x$valid, ]
   pd <- pdspx(xval, obj)
   y <- gdvend(xval, pd, scale, unit)
