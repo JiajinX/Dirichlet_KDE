@@ -1,6 +1,7 @@
 ## Overview
 
-Companion package for the article *Bandwidth rules for Dirichlet kernel density estimation on the simplex*, including:
+Companion package for the article *Bandwidth rules for Dirichlet kernel density estimation on the simplex* (Xie, García-Portugués, and Wang, 2026)
+, including:
 
 -   simulation
 -   real data application
@@ -53,6 +54,8 @@ For real data application:
 -   The script `wholesale.R` reproduces the selector comparison experiment (Results in folder `Wholesale`) and generates the density contour from the EMI selector (Figure `8.1-wholesale.pdf`).
 -   The script `employ.R` reproduces the clustering experiment and generates density-ascent trajectories (Figure `8.2-clustering.pdf`), basin of attraction for clusters (Figure `8.2-clustering.pdf`), and clusters assignment on a world map (Figure `8.2-worldmap.pdf`).
 
-## Figures and Results
+## Figures and results
 
 The folder `figures/` and `/results` contain all outputs generated from simulations and real data applications.
+
+## References
