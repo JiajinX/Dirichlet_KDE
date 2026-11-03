@@ -15,7 +15,7 @@ project/
 ├── R/          # General-purpose functions
 ├── scripts/    # Analysis pipelines (call functions from R/)
 ├── results/    # Data sources for tables and images
-├── figures/    # Figures for the paper
+└── figures/    # Figures for the paper
 ```
 
 ## Requirements
